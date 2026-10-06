@@ -1,0 +1,6 @@
+{
+  "name": "TBT Notice Board",
+  "description": "Mobile-first notice board with real-time updates, category filtering, important alerts, and admin dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // TBT Notice Board Production Rules:
+    // 1. Normal users require NO authentication.
+    // 2. Anyone can read active, published notices.
+    // 3. Authenticated admin users can create, update, and delete notices.
+    match /notices/{noticeId} {
+      allow read: if resource == null || resource.data.isArchived == false || request.auth != null;
+      allow create, update, delete: if request.auth != null;
+    }
+  }
+}
