@@ -58,4 +58,13 @@ interface NoticeDao {
 
     @Query("DELETE FROM notices WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    @Query("DELETE FROM notices WHERE id NOT IN (:validIds)")
+    suspend fun deleteNoticesNotIn(validIds: List<String>)
+
+    @Query("DELETE FROM notices")
+    suspend fun deleteAllNotices()
+
+    @Query("DELETE FROM notices WHERE title = :title")
+    suspend fun deleteByTitle(title: String)
 }

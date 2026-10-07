@@ -329,6 +329,13 @@ class NoticeBoardViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun deleteAllNotices() {
+        viewModelScope.launch {
+            repository.deleteAllNotices()
+            _selectedNotice.value = null
+        }
+    }
+
     fun togglePin(id: String) {
         viewModelScope.launch {
             repository.togglePin(id)

@@ -148,6 +148,7 @@ fun NoticeBoardScreen(
             onCreateNotice = { viewModel.openCreateNotice() },
             onEditNotice = { viewModel.openEditNotice(it) },
             onDeleteNotice = { viewModel.deleteNotice(it) },
+            onDeleteAllNotices = { viewModel.deleteAllNotices() },
             onTogglePin = { viewModel.togglePin(it) },
             onToggleImportant = { viewModel.toggleImportant(it) },
             onToggleArchive = { viewModel.toggleArchive(it) },

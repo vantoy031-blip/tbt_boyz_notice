@@ -93,6 +93,7 @@ fun AdminDashboard(
     onCreateNotice: () -> Unit,
     onEditNotice: (Notice) -> Unit,
     onDeleteNotice: (String) -> Unit,
+    onDeleteAllNotices: () -> Unit = {},
     onTogglePin: (String) -> Unit,
     onToggleImportant: (String) -> Unit,
     onToggleArchive: (String) -> Unit,
@@ -101,6 +102,7 @@ fun AdminDashboard(
 ) {
     var selectedFilter by remember { mutableStateOf("all") } // "all", "active", "archived", "important"
     var noticeToDelete by remember { mutableStateOf<Notice?>(null) }
+    var showDeleteAllConfirm by remember { mutableStateOf(false) }
 
     val filteredNotices = remember(notices, selectedFilter) {
         when (selectedFilter) {
@@ -345,6 +347,26 @@ fun AdminDashboard(
                         ),
                         color = TextMuted
                     )
+
+                    if (notices.isNotEmpty()) {
+                        androidx.compose.material3.TextButton(
+                            onClick = { showDeleteAllConfirm = true },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete All Notices",
+                                tint = DangerRed,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Delete All",
+                                color = DangerRed,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -422,6 +444,46 @@ fun AdminDashboard(
             },
             dismissButton = {
                 TextButton(onClick = { noticeToDelete = null }) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            },
+            containerColor = DarkSurface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // Delete ALL confirmation dialog
+    if (showDeleteAllConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAllConfirm = false },
+            title = {
+                Text(
+                    text = "Delete All Notices?",
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to permanently delete ALL ${notices.size} notices from both the cloud and all users? This will completely empty the notice board for everyone.",
+                    color = TextSecondary,
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteAllNotices()
+                        showDeleteAllConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Delete Everything", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showDeleteAllConfirm = false }) {
                     Text("Cancel", color = TextSecondary)
                 }
             },

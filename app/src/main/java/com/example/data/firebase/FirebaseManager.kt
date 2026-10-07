@@ -85,11 +85,24 @@ object FirebaseManager {
                 .addSnapshotListener { snapshots, error ->
                     if (error != null) {
                         Log.w(TAG, "Firestore listen failed: ${error.message}")
-                        _syncStatusMessage.value = "Sync paused: ${error.message}"
+                        _syncStatusMessage.value = "Sync error: ${error.message}"
                         return@addSnapshotListener
                     }
 
-                    if (snapshots != null && !snapshots.isEmpty) {
+                    if (snapshots == null) return@addSnapshotListener
+
+                    // 1. Immediately delete any removed documents from local Room database
+                    for (change in snapshots.documentChanges) {
+                        if (change.type == com.google.firebase.firestore.DocumentChange.Type.REMOVED) {
+                            val removedId = change.document.id
+                            scope.launch(Dispatchers.IO) {
+                                noticeDao.deleteById(removedId)
+                                Log.d(TAG, "Notice $removedId deleted from local DB via real-time change")
+                            }
+                        }
+                    }
+
+                    if (!snapshots.isEmpty) {
                         // Check for new notices to dispatch mobile push/system notifications
                         if (!isFirstSnapshot) {
                             val context = appContext
@@ -118,6 +131,7 @@ object FirebaseManager {
 
                         scope.launch(Dispatchers.IO) {
                             val cloudNotices = mutableListOf<NoticeEntity>()
+                            val cloudIds = mutableListOf<String>()
                             for (doc in snapshots.documents) {
                                 val id = doc.id
                                 val title = doc.getString("title") ?: ""
@@ -131,6 +145,7 @@ object FirebaseManager {
                                 val publishedAt = extractTimestamp(doc, "publishedAt", fallback = createdAt)
 
                                 if (title.isNotBlank()) {
+                                    cloudIds.add(id)
                                     cloudNotices.add(
                                         NoticeEntity(
                                             id = id,
@@ -147,19 +162,26 @@ object FirebaseManager {
                                     )
                                 }
                             }
+
                             if (cloudNotices.isNotEmpty()) {
                                 noticeDao.insertAll(cloudNotices)
-                                _syncStatusMessage.value = "Synced ${cloudNotices.size} notices from cloud"
+                                // CRITICAL: Delete any notices in local database that do NOT exist in Firestore!
+                                // This ensures any deleted notice or local dummy notice is deleted for EVERYONE!
+                                noticeDao.deleteNoticesNotIn(cloudIds)
+                                _syncStatusMessage.value = "Synced ${cloudNotices.size} notices with cloud"
+                            } else {
+                                noticeDao.deleteAllNotices()
+                                _syncStatusMessage.value = "Synced (0 notices)"
                             }
                         }
-                    } else if (snapshots != null && snapshots.isEmpty) {
-                        // Cloud collection is currently empty; seed local notices to cloud if available
+                    } else {
+                        // Cloud collection is completely empty (admin deleted all notices, or none exist yet)
+                        isFirstSnapshot = false
                         scope.launch(Dispatchers.IO) {
-                            try {
-                                uploadLocalNoticesToCloud(db, noticeDao)
-                            } catch (e: Exception) {
-                                Log.w(TAG, "Could not seed initial notices to cloud: ${e.message}")
-                            }
+                            // Purge all notices from local database so no ghost/deleted notices remain
+                            noticeDao.deleteAllNotices()
+                            _syncStatusMessage.value = "Synced: No active notices"
+                            Log.d(TAG, "Cloud notices collection is empty. Cleared local notices.")
                         }
                     }
                 }
@@ -182,35 +204,6 @@ object FirebaseManager {
             }
         } catch (_: Exception) {
             fallback
-        }
-    }
-
-    private suspend fun uploadLocalNoticesToCloud(db: FirebaseFirestore, noticeDao: NoticeDao) {
-        try {
-            val list = noticeDao.getAllNoticesList()
-            if (list.isNotEmpty()) {
-                val batch = db.batch()
-                for (notice in list) {
-                    val docRef = db.collection(COLLECTION_NOTICES).document(notice.id)
-                    val data = hashMapOf(
-                        "title" to notice.title,
-                        "description" to notice.description,
-                        "category" to notice.category,
-                        "isImportant" to notice.isImportant,
-                        "isPinned" to notice.isPinned,
-                        "isArchived" to notice.isArchived,
-                        "createdAt" to notice.createdAt,
-                        "updatedAt" to notice.updatedAt,
-                        "publishedAt" to notice.publishedAt
-                    )
-                    batch.set(docRef, data)
-                }
-                batch.commit().await()
-                Log.d(TAG, "Uploaded ${list.size} notices to cloud Firestore")
-                _syncStatusMessage.value = "Synced ${list.size} notices to cloud"
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Batch write failed: ${e.message}")
         }
     }
 
@@ -245,6 +238,22 @@ object FirebaseManager {
         }
     }
 
+    suspend fun deleteAllNoticesFromCloud() {
+        val db = firestore ?: return
+        try {
+            val snapshots = db.collection(COLLECTION_NOTICES).get().await()
+            if (snapshots.isEmpty) return
+            val batch = db.batch()
+            for (doc in snapshots.documents) {
+                batch.delete(doc.reference)
+            }
+            batch.commit().await()
+            Log.d(TAG, "Successfully deleted all ${snapshots.size()} notices from Firestore")
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not delete all notices from Firestore: ${e.message}")
+        }
+    }
+
     suspend fun updateNoticeFieldsInCloud(noticeId: String, fields: Map<String, Any>) {
         val db = firestore ?: return
         try {
@@ -260,6 +269,7 @@ object FirebaseManager {
         return try {
             val snapshots = db.collection(COLLECTION_NOTICES).get().await()
             val cloudNotices = mutableListOf<NoticeEntity>()
+            val cloudIds = mutableListOf<String>()
             for (doc in snapshots.documents) {
                 val id = doc.id
                 val title = doc.getString("title") ?: ""
@@ -273,6 +283,7 @@ object FirebaseManager {
                 val publishedAt = extractTimestamp(doc, "publishedAt", fallback = createdAt)
 
                 if (title.isNotBlank()) {
+                    cloudIds.add(id)
                     cloudNotices.add(
                         NoticeEntity(
                             id = id,
@@ -291,7 +302,11 @@ object FirebaseManager {
             }
             if (cloudNotices.isNotEmpty()) {
                 noticeDao.insertAll(cloudNotices)
+                noticeDao.deleteNoticesNotIn(cloudIds)
                 _syncStatusMessage.value = "Synced ${cloudNotices.size} notices from cloud"
+            } else {
+                noticeDao.deleteAllNotices()
+                _syncStatusMessage.value = "Synced: 0 notices"
             }
             Result.success(cloudNotices.size)
         } catch (e: Exception) {
