@@ -22,8 +22,16 @@ object NoticeNotificationHelper {
     const val CHANNEL_NAME = "TBT BOYz Notices"
     const val CHANNEL_DESC = "Notifications for new notices, events, and important alerts"
 
+    const val SERVICE_CHANNEL_ID = "tbt_service_status_channel"
+    const val SERVICE_CHANNEL_NAME = "TBT Background Monitor"
+    const val SERVICE_CHANNEL_DESC = "Ongoing status for real-time background announcement monitoring"
+
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+
+            // High priority channel for announcement alerts
             val importance = NotificationManager.IMPORTANCE_HIGH
             val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
                 description = CHANNEL_DESC
@@ -31,9 +39,18 @@ object NoticeNotificationHelper {
                 lightColor = 0xFFE11D48.toInt() // Crimson
                 enableVibration(true)
             }
-            val notificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-            notificationManager?.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(channel)
+
+            // Low priority channel for ongoing background service
+            val serviceChannel = NotificationChannel(
+                SERVICE_CHANNEL_ID,
+                SERVICE_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = SERVICE_CHANNEL_DESC
+                setShowBadge(false)
+            }
+            notificationManager.createNotificationChannel(serviceChannel)
         }
     }
 

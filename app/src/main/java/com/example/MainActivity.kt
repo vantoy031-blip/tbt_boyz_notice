@@ -25,6 +25,9 @@ class MainActivity : ComponentActivity() {
         // Ensure high-priority notification channel is created
         NoticeNotificationHelper.createNotificationChannel(this)
 
+        // Ensure live background service is active
+        com.example.background.NoticeBackgroundService.start(this)
+
         // Handle notice notification tap
         intent?.getStringExtra("notice_id")?.let { noticeId ->
             viewModel.openNoticeById(noticeId)

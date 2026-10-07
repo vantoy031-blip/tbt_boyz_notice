@@ -9,6 +9,7 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         val action = intent?.action
         Log.d("BootReceiver", "Boot broadcast received ($action). Initializing background sync...")
+        NoticeBackgroundService.start(context)
         NoticeBackgroundSyncScheduler.schedulePeriodicSync(context)
     }
 }

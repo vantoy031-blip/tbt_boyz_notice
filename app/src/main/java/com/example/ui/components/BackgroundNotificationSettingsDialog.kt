@@ -199,11 +199,26 @@ fun BackgroundNotificationSettingsDialog(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "WorkManager automatically checks for new notices in the background even if the app is closed or removed from recents.",
+                            text = "Active Foreground Service + Instant Network Reconnect. Whenever you turn on Wi-Fi or Mobile Data, any new notices are immediately detected and notified on your phone, even if the app was closed.",
                             fontSize = 12.sp,
                             color = TextSecondary,
                             lineHeight = 16.sp
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        androidx.compose.material3.TextButton(
+                            onClick = {
+                                com.example.background.NoticeBackgroundService.start(context)
+                                Toast.makeText(context, "Background monitor restarted and active!", Toast.LENGTH_SHORT).show()
+                            },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                        ) {
+                            Text(
+                                text = "Restart Background Monitor ↺",
+                                color = GoldAccent,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 

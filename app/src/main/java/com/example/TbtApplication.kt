@@ -13,7 +13,10 @@ class TbtApplication : Application() {
         // Ensure system notification channel exists
         NoticeNotificationHelper.createNotificationChannel(this)
 
-        // Schedule background sync via WorkManager + AlarmManager
+        // Start live Foreground Service so Firestore receives alerts even when app is closed/cleared
+        com.example.background.NoticeBackgroundService.start(this)
+
+        // Schedule background sync via WorkManager + AlarmManager as persistent backup
         NoticeBackgroundSyncScheduler.schedulePeriodicSync(this)
     }
 }
