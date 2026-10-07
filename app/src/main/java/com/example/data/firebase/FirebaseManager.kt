@@ -34,6 +34,8 @@ object FirebaseManager {
 
     private var firestore: FirebaseFirestore? = null
     private var snapshotListener: ListenerRegistration? = null
+    private var appContext: Context? = null
+    private var isFirstSnapshot = true
 
     private val _isFirebaseConnected = MutableStateFlow(false)
     val isFirebaseConnected: StateFlow<Boolean> = _isFirebaseConnected.asStateFlow()
@@ -42,6 +44,7 @@ object FirebaseManager {
     val syncStatusMessage: StateFlow<String> = _syncStatusMessage.asStateFlow()
 
     fun initialize(context: Context, noticeDao: NoticeDao, scope: CoroutineScope) {
+        appContext = context.applicationContext
         try {
             val app = if (FirebaseApp.getApps(context).isEmpty()) {
                 val options = FirebaseOptions.Builder()
@@ -87,6 +90,32 @@ object FirebaseManager {
                     }
 
                     if (snapshots != null && !snapshots.isEmpty) {
+                        // Check for new notices to dispatch mobile push/system notifications
+                        if (!isFirstSnapshot) {
+                            val context = appContext
+                            if (context != null) {
+                                for (change in snapshots.documentChanges) {
+                                    if (change.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
+                                        val doc = change.document
+                                        val title = doc.getString("title") ?: ""
+                                        val desc = doc.getString("description") ?: ""
+                                        val isArchived = doc.getBoolean("isArchived") ?: false
+                                        if (title.isNotBlank() && !isArchived) {
+                                            com.example.notification.NoticeNotificationHelper.showNoticeNotification(
+                                                context = context,
+                                                noticeId = doc.id,
+                                                title = title,
+                                                description = desc,
+                                                category = doc.getString("category") ?: "general",
+                                                isImportant = doc.getBoolean("isImportant") ?: false
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        isFirstSnapshot = false
+
                         scope.launch(Dispatchers.IO) {
                             val cloudNotices = mutableListOf<NoticeEntity>()
                             for (doc in snapshots.documents) {

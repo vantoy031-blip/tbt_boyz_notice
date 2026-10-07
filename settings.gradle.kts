@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "TBT Notice Board"
+rootProject.name = "TBT BOYz Notice"
 
 include(":app")

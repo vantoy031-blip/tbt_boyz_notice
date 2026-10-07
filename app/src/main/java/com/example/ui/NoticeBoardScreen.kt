@@ -1,7 +1,10 @@
 package com.example.ui
 
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -52,6 +55,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -117,6 +121,23 @@ fun NoticeBoardScreen(
 
     val firebaseSyncStatus by viewModel.firebaseSyncStatus.collectAsState()
 
+    // Notification permission launcher for Android 13+ (API 33+)
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Toast.makeText(context, "Mobile notifications enabled for TBT BOYz Notice!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!com.example.notification.NoticeNotificationHelper.hasNotificationPermission(context)) {
+                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
     if (showAdminDashboard) {
         AdminDashboard(
             notices = allNotices,
@@ -129,7 +150,17 @@ fun NoticeBoardScreen(
             onDeleteNotice = { viewModel.deleteNotice(it) },
             onTogglePin = { viewModel.togglePin(it) },
             onToggleImportant = { viewModel.toggleImportant(it) },
-            onToggleArchive = { viewModel.toggleArchive(it) }
+            onToggleArchive = { viewModel.toggleArchive(it) },
+            onTestNotification = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    !com.example.notification.NoticeNotificationHelper.hasNotificationPermission(context)
+                ) {
+                    notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    viewModel.sendTestNotification()
+                    Toast.makeText(context, "Test notification dispatched to status bar!", Toast.LENGTH_SHORT).show()
+                }
+            }
         )
     } else {
         Scaffold(
@@ -384,7 +415,7 @@ fun HeaderTopBar(
 
                     Column {
                         Text(
-                            text = "TBT Notice Board",
+                            text = "TBT BOYz Notice",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 17.sp,

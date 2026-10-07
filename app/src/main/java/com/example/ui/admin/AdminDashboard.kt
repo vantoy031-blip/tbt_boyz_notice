@@ -96,6 +96,7 @@ fun AdminDashboard(
     onTogglePin: (String) -> Unit,
     onToggleImportant: (String) -> Unit,
     onToggleArchive: (String) -> Unit,
+    onTestNotification: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedFilter by remember { mutableStateOf("all") } // "all", "active", "archived", "important"
@@ -284,22 +285,33 @@ fun AdminDashboard(
                             )
                         }
 
-                        Button(
-                            onClick = onCreateNotice,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = CrimsonPrimary,
-                                contentColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.testTag("admin_create_notice_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Create",
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Create", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = onTestNotification,
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, GoldAccent.copy(alpha = 0.6f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = GoldAccent)
+                            ) {
+                                Text("Test Alert", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                            }
+
+                            Button(
+                                onClick = onCreateNotice,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = CrimsonPrimary,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.testTag("admin_create_notice_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Create",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Create", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
                         }
                     }
                 }

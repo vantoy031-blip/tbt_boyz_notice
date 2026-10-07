@@ -17,10 +17,10 @@ import org.robolectric.annotation.Config
 class ExampleRobolectricTest {
 
   @Test
-  fun `read string from context matches TBT Notice Board`() {
+  fun `read string from context matches TBT BOYz Notice`() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
-    assertEquals("TBT Notice Board", appName)
+    assertEquals("TBT BOYz Notice", appName)
   }
 
   @Test

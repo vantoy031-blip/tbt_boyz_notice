@@ -168,6 +168,15 @@ class NoticeBoardViewModel(application: Application) : AndroidViewModel(applicat
         _readStateVersion.value += 1
     }
 
+    fun openNoticeById(id: String) {
+        viewModelScope.launch {
+            val entity = database.noticeDao().getNoticeById(id)
+            if (entity != null) {
+                openNoticeDetails(entity.toDomain())
+            }
+        }
+    }
+
     fun closeNoticeDetails() {
         _selectedNotice.value = null
     }
@@ -291,16 +300,24 @@ class NoticeBoardViewModel(application: Application) : AndroidViewModel(applicat
                 )
                 repository.updateNotice(updated)
             } else {
-                repository.createNotice(
+                val created = repository.createNotice(
                     title = title,
                     description = description,
                     category = category,
                     isImportant = isImportant,
                     isPinned = isPinned
                 )
+                com.example.notification.NoticeNotificationHelper.showNoticeNotification(
+                    context = getApplication(),
+                    notice = created
+                )
             }
             closeNoticeForm()
         }
+    }
+
+    fun sendTestNotification() {
+        com.example.notification.NoticeNotificationHelper.sendTestNotification(getApplication())
     }
 
     fun deleteNotice(id: String) {
