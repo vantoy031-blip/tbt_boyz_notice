@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.admin.AdminDashboard
 import com.example.ui.admin.AdminLoginDialog
 import com.example.ui.admin.NoticeFormDialog
+import com.example.ui.components.BackgroundNotificationSettingsDialog
 import com.example.ui.components.EmptyState
 import com.example.ui.components.NoticeCard
 import com.example.ui.components.NoticeDetailsDialog
@@ -87,6 +88,7 @@ import com.example.ui.theme.GoldContainer
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.WarningAmber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,6 +110,7 @@ fun NoticeBoardScreen(
     val showAdminLoginDialog by viewModel.showAdminLoginDialog.collectAsState()
     val showAdminDashboard by viewModel.showAdminDashboard.collectAsState()
     val showNoticeFormDialog by viewModel.showNoticeFormDialog.collectAsState()
+    val showBackgroundSettingsDialog by viewModel.showBackgroundSettingsDialog.collectAsState()
     val editingNotice by viewModel.editingNotice.collectAsState()
     val isAdminLoggedIn by viewModel.isAdminLoggedIn.collectAsState()
     val readVersion by viewModel.readStateVersion.collectAsState()
@@ -181,10 +184,7 @@ fun NoticeBoardScreen(
                         if (!isSearchActive) viewModel.setSearchQuery("")
                     },
                     onSearchQueryChange = { viewModel.setSearchQuery(it) },
-                    onMarkAllAsRead = {
-                        viewModel.markAllAsRead()
-                        Toast.makeText(context, "All notices marked as read", Toast.LENGTH_SHORT).show()
-                    },
+                    onNotificationBellClick = { viewModel.openBackgroundSettings() },
                     onAdminClick = { viewModel.openAdminAccess() }
                 )
             }
@@ -194,6 +194,42 @@ fun NoticeBoardScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
+                // Background Battery Optimization Hint Banner if restricted
+                val isBatteryRestricted = remember {
+                    !com.example.background.BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)
+                }
+                if (isBatteryRestricted) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = WarningAmber.copy(alpha = 0.12f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, WarningAmber.copy(alpha = 0.35f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .clickable { viewModel.openBackgroundSettings() }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Text(text = "⚡", fontSize = 13.sp)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Background alerts active. Tap to allow unrestricted battery for instant alerts.",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                    color = WarningAmber
+                                )
+                            }
+                            Text(
+                                text = "SETUP →",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
+                                color = WarningAmber
+                            )
+                        }
+                    }
+                }
                 // Section Title Banner
                 Row(
                     modifier = Modifier
@@ -356,6 +392,22 @@ fun NoticeBoardScreen(
             }
         )
     }
+
+    // Background Alerts & Battery Settings Dialog
+    if (showBackgroundSettingsDialog) {
+        BackgroundNotificationSettingsDialog(
+            unreadCount = unreadCount,
+            onMarkAllAsRead = { viewModel.markAllAsRead() },
+            onRequestNotificationPermission = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    com.example.background.BatteryOptimizationHelper.openAppNotificationSettings(context)
+                }
+            },
+            onDismiss = { viewModel.closeBackgroundSettings() }
+        )
+    }
 }
 
 @Composable
@@ -366,7 +418,7 @@ fun HeaderTopBar(
     isAdminLoggedIn: Boolean,
     onSearchToggle: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
-    onMarkAllAsRead: () -> Unit,
+    onNotificationBellClick: () -> Unit,
     onAdminClick: () -> Unit
 ) {
     Surface(
@@ -394,21 +446,15 @@ fun HeaderTopBar(
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .background(
-                                color = CrimsonPrimary,
-                                shape = RoundedCornerShape(10.dp)
-                            )
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White)
                             .border(1.dp, GoldAccent.copy(alpha = 0.5f), RoundedCornerShape(10.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "TBT",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Black,
-                                fontSize = 12.sp,
-                                letterSpacing = 0.5.sp
-                            ),
-                            color = Color.White
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_tbt_black_logo_1791365385472),
+                            contentDescription = "TBT Logo",
+                            modifier = Modifier.size(28.dp)
                         )
                     }
 
@@ -456,7 +502,7 @@ fun HeaderTopBar(
 
                     // Bell with unread badge counter
                     IconButton(
-                        onClick = onMarkAllAsRead,
+                        onClick = onNotificationBellClick,
                         modifier = Modifier
                             .size(38.dp)
                             .clip(CircleShape)

@@ -51,6 +51,18 @@ class NoticeBoardViewModel(application: Application) : AndroidViewModel(applicat
     private val _editingNotice = MutableStateFlow<Notice?>(null)
     val editingNotice: StateFlow<Notice?> = _editingNotice.asStateFlow()
 
+    // Background notifications settings dialog state
+    private val _showBackgroundSettingsDialog = MutableStateFlow(false)
+    val showBackgroundSettingsDialog: StateFlow<Boolean> = _showBackgroundSettingsDialog.asStateFlow()
+
+    fun openBackgroundSettings() {
+        _showBackgroundSettingsDialog.value = true
+    }
+
+    fun closeBackgroundSettings() {
+        _showBackgroundSettingsDialog.value = false
+    }
+
     // Read status tracker version to force recomposition when items marked as read
     private val _readStateVersion = MutableStateFlow(0)
     val readStateVersion: StateFlow<Int> = _readStateVersion.asStateFlow()

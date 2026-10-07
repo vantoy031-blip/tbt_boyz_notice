@@ -10,9 +10,34 @@ class UserPreferences(context: Context) {
     companion object {
         private const val KEY_LAST_VIEWED_TIMESTAMP = "last_viewed_notice_timestamp"
         private const val KEY_READ_NOTICE_IDS = "read_notice_ids"
+        private const val KEY_NOTIFIED_NOTICE_IDS = "notified_notice_ids"
+        private const val KEY_BACKGROUND_SYNC_ENABLED = "background_sync_enabled"
+        private const val KEY_LAST_BACKGROUND_SYNC_TIME = "last_background_sync_time"
         private const val KEY_ADMIN_LOGGED_IN = "admin_logged_in"
         private const val KEY_ADMIN_EMAIL = "admin_email"
         private const val KEY_ADMIN_PASSWORD_HASH = "admin_password_hash"
+    }
+
+    var isBackgroundSyncEnabled: Boolean
+        get() = prefs.getBoolean(KEY_BACKGROUND_SYNC_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_BACKGROUND_SYNC_ENABLED, value).apply()
+
+    var lastBackgroundSyncTime: Long
+        get() = prefs.getLong(KEY_LAST_BACKGROUND_SYNC_TIME, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_BACKGROUND_SYNC_TIME, value).apply()
+
+    fun markNoticeAsNotified(noticeId: String) {
+        val currentSet = getNotifiedNoticeIds().toMutableSet()
+        currentSet.add(noticeId)
+        prefs.edit().putStringSet(KEY_NOTIFIED_NOTICE_IDS, currentSet).apply()
+    }
+
+    fun isNoticeNotified(noticeId: String): Boolean {
+        return getNotifiedNoticeIds().contains(noticeId)
+    }
+
+    private fun getNotifiedNoticeIds(): Set<String> {
+        return prefs.getStringSet(KEY_NOTIFIED_NOTICE_IDS, emptySet()) ?: emptySet()
     }
 
     var lastViewedTimestamp: Long
